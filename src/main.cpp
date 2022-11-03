@@ -47,6 +47,11 @@ enum class level_item
   player
 };
 
+enum class player_item
+{
+  key,
+};
+
 struct LevelItem
 {
   LevelItem(level_item type, int x, int y)
@@ -97,6 +102,8 @@ class Player : public GameObject
 private:
   Location *m_Location;
 
+  std::vector<player_item> *m_inventory = new std::vector<player_item>();
+
   // IM A MEMORY LEAK (I think, delete what this returns)
   GameObjectColor *Health_to_color(uint8_t health)
   {
@@ -131,6 +138,12 @@ public:
     m_PlayerHealth = starting_health;
   };
 
+  void pick_up_item(player_item item)
+  {
+    m_inventory->push_back(item);
+  }
+
+  
   uint8_t m_PlayerHealth; // 0 - 255
 
   void start_action_select(std::vector<GameObject *> *world_game_objects)
@@ -259,6 +272,7 @@ public:
   ~Player()
   {
     delete m_Location;
+    delete m_inventory;
   };
 
   Location *GetLocation() { return m_Location; }
@@ -317,9 +331,14 @@ public:
         return;
       }
 
+      //cast the interactor to a player
+      Player *player = static_cast<Player *>(interactor);
+
+      
+
       //Toggle the door
       m_IsOpen = !m_IsOpen;
-      Serial.println("The door is now " + String(m_IsOpen ? "open" : "closed"));
+      Serial.println("The door is now " + m_IsOpen ? "open" : "closed");
     }
 
     set_is_player_passable(m_IsOpen);
