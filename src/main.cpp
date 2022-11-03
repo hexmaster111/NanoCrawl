@@ -1,5 +1,94 @@
 // Game Logic Stuff
+//
+#ifndef WINDOWS
 #include <Arduino.h>
+#endif
+
+#if WINDOWS
+#include <vector>
+#include <iostream>
+
+// Serial.println(); replacement hackin thing
+class DebugSerial
+{
+public:
+  void println(const char *str)
+  {
+    std::cout << str << std::endl;
+  }
+
+  void begin(int baud)
+  {
+    std::cout << "Serial.begin(" << baud << ")" << std::endl;
+  }
+
+#include <stdarg.h>
+#include <stdio.h>
+
+  void printf(const char *fmt, ...)
+  {
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+  }
+
+  // Two step process to get data into the amening, first mark the data as available, then provide it to read
+  int available()
+  {
+    return 0;
+  }
+
+  char read()
+  {
+    return 0;
+  }
+} Serial;
+
+#endif
+
+#if WINDOWS
+class Debug_Display
+{
+public:
+  struct Color
+  {
+    Color(int r, int g, int b)
+    {
+      this->r = r;
+      this->g = g;
+      this->b = b;
+    }
+
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+  };
+
+  // TODO: Draw this to a window
+  void begin()
+  {
+  }
+
+  void clear()
+  {
+  }
+
+  void show(){};
+
+  void setPixelColor(int row_col_to_index, Color color){};
+} pixels;
+
+static class ESP
+{
+public:
+  static long getFreeHeap()
+  {
+    return 100000;
+  }
+} ESP;
+
+#endif
 
 struct Location
 {
@@ -8,6 +97,7 @@ struct Location
     this->x = x;
     this->y = y;
   }
+
   int x;
   int y;
 };
@@ -20,6 +110,7 @@ struct GameObjectColor
     this->g = g;
     this->b = b;
   }
+
   char r;
   char g;
   char b;
@@ -60,6 +151,7 @@ struct LevelItem
     this->x = x;
     this->y = y;
   }
+
   level_item type;
   int x;
   int y;
@@ -132,7 +224,8 @@ private:
   }
 
 public:
-  Player(const int starting_x, const int starting_y, const uint8_t starting_health) : GameObject(false, level_item::player)
+  Player(const int starting_x, const int starting_y, const uint8_t starting_health) : GameObject(
+                                                                                          false, level_item::player)
   {
     m_Location = new Location(starting_x, starting_y);
     m_PlayerHealth = starting_health;
@@ -143,7 +236,6 @@ public:
     m_inventory->push_back(item);
   }
 
-  
   uint8_t m_PlayerHealth; // 0 - 255
 
   void start_action_select(std::vector<GameObject *> *world_game_objects)
@@ -209,7 +301,6 @@ public:
 
   void move(std::vector<GameObject *> *world_objects, Direction direction)
   {
-
     switch (direction)
     {
     case Direction::North:
@@ -331,12 +422,10 @@ public:
         return;
       }
 
-      //cast the interactor to a player
+      // cast the interactor to a player
       Player *player = static_cast<Player *>(interactor);
 
-      
-
-      //Toggle the door
+      // Toggle the door
       m_IsOpen = !m_IsOpen;
       Serial.println("The door is now " + m_IsOpen ? "open" : "closed");
     }
@@ -442,16 +531,19 @@ void loadWorldState(std::vector<LevelItem> *level, std::vector<GameObject *> *ou
     }
   }
 }
+
 // this is where we put important things about the game
 namespace World_object_helpers
 {
   Player *PlayerPointer;
 }
 
+#ifndef WINDOWS
 // Game Rendering Code
 #include <Adafruit_NeoPixel.h>
 
 Adafruit_NeoPixel pixels(32 * 8, 16, NEO_GRB);
+#endif
 
 int rowColToIndex(int x, int y)
 {
@@ -471,16 +563,27 @@ void render_game_object(GameObject *game_object)
   Location *location = game_object->GetLocation();
   GameObjectColor *color = game_object->GetColor();
 
+#ifndef WINDOWS
   pixels.setPixelColor(rowColToIndex(location->x, location->y), pixels.Color(color->r, color->g, color->b));
   delete color;
+#endif
+
+#if WINDOWS
+  std::cout << "X: " << location->x << " Y: " << location->y << " R: " << color->r << " G: " << color->g << " B: " << color->b << std::endl;
+  delete color;
+#endif
 }
 
 void setup()
 {
   Serial.begin(9600);
+
+#ifndef WINDOWS
   // Wait for serial to connect
   while (!Serial)
     ;
+#endif
+
   Serial.printf("Starting up...\r\n");
 
   pixels.begin();
@@ -542,6 +645,7 @@ void loop()
       render_game_object(World_Game_Objects->at(i));
     }
     pixels.show();
-    Serial.printf("Free Heap: %d\r\n", ESP.getFreeHeap()); // Im not worried, but this is 200k <- thats what copilot says
+    Serial.printf("Free Heap: %d\r\n", ESP.getFreeHeap());
+    // Im not worried, but this is 200k <- thats what copilot says
   }
 }
